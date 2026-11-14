@@ -54,7 +54,7 @@
   #corner{position:absolute;left:0;top:0;width:7em;height:7em;z-index:5}
   #setup{position:fixed;inset:0;background:rgba(0,0,0,.78);display:none;align-items:center;justify-content:center;z-index:50}
   #setup .card{background:linear-gradient(#1b2a6b,#0f1640);border:3px solid #e9c24d;border-radius:16px;padding:18px 20px;
-    width:min(88vw,420px);color:#fff;font-size:16px;box-shadow:0 10px 40px rgba(0,0,0,.6)}
+    width:min(88vw,420px);max-height:90vh;overflow-y:auto;-webkit-overflow-scrolling:touch;color:#fff;font-size:16px;box-shadow:0 10px 40px rgba(0,0,0,.6)}
   #setup h2{margin:0 0 12px;color:#ffd75e;font-size:21px}
   #setup label{display:block;font-weight:700;margin-bottom:10px}
   #setup input{display:block;width:100%;box-sizing:border-box;font-size:16px;padding:11px 12px;margin-top:5px;border:0;border-radius:9px}
@@ -69,7 +69,16 @@
   #setup select{width:100%;font-size:16px;padding:9px;border-radius:8px;border:0;margin:6px 0}
   #setup .fbtn{display:inline-block;background:#3c3c4a;padding:8px 12px;border-radius:8px;font-weight:700;cursor:pointer}
   #setup .fbtn input{display:none}
-  #mFileName{font-size:13px;color:#cfd6ff}
+  #songList{max-height:150px;overflow:auto;margin:4px 0 8px}
+  #setup .song{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:14px;padding:5px 2px;border-bottom:1px solid rgba(255,255,255,.1)}
+  #setup .song span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #setup .song.dim{color:#9aa3d6}
+  #setup button.x{width:auto;margin:0 0 0 6px;padding:4px 9px;font-size:14px;background:#5a2030;color:#fff;border-radius:7px}
+  #setup button.sm,#setup .fbtn.sm{width:auto;margin:0;padding:7px 11px;font-size:14px;background:#3c3c4a;color:#fff}
+  #setup .row2{display:flex;gap:8px;align-items:center}
+  #nowPlaying{font-size:13px;color:#ffd75e;margin:6px 0;min-height:1em}
+  #setup .special{font-size:13.5px;margin-top:8px;display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+  #setup .special span{color:#cfd6ff}
   #setup .vol{display:flex;align-items:center;gap:8px;margin:8px 0}
   #setup .vol input{flex:1}
   #setup .chk{font-weight:600;font-size:14px;display:flex;align-items:center;gap:8px;margin:0}
@@ -106,6 +115,7 @@
       <button class="alt" id="tMulti">×1</button>
       <button class="alt" id="tAuto">▶ Авто-демо</button>
       <button class="alt" id="tMusic">🔊 Музыка</button>
+      <button class="alt" id="tNext">⏭ Ән</button>
       <button class="alt" id="tSetup">⚙️ Баптау</button>
     </div>
   </div>
@@ -119,8 +129,17 @@
   <p class="hint" id="sNote" style="display:none">⚠️ Бұл алдын ала көру беті эфирге қосыла алмайды — GitHub Pages сілтемесін аш.</p>
   <div class="mus">
     <b>🎵 Музыка</b>
-    <select id="mSrc"><option value="gen">Домбыра әуені (автоматты)</option><option value="file">Өз музыкам (mp3)</option><option value="off">Өшірулі</option></select>
-    <div id="mFileRow"><label class="fbtn">📁 Файл таңдау<input type="file" id="mFile" accept="audio/*"></label> <span id="mFileName"></span></div>
+    <select id="mSrc"><option value="gen">Домбыра әуені (автоматты)</option><option value="file">Өз әндерім (плейлист)</option><option value="off">Өшірулі</option></select>
+    <div id="mFileRow">
+      <div id="songList"></div>
+      <div class="row2"><label class="fbtn">➕ Ән қосу<input type="file" id="mAdd" accept="audio/*" multiple></label>
+        <button type="button" class="sm" id="mNext">⏭ Келесі</button></div>
+      <div id="nowPlaying"></div>
+      <div class="special">💍 Той кезінде: <span id="weddingName"></span>
+        <label class="fbtn sm">таңдау<input type="file" id="weddingFile" accept="audio/*"></label><button type="button" class="x" id="weddingDel">✕</button></div>
+      <div class="special">💃 Вальс кезінде: <span id="waltzName"></span>
+        <label class="fbtn sm">таңдау<input type="file" id="waltzFile" accept="audio/*"></label><button type="button" class="x" id="waltzDel">✕</button></div>
+    </div>
     <div class="vol">🔈 <input type="range" id="mVol" min="0" max="100"> 🔊</div>
     <label class="chk"><input type="checkbox" id="mSfx"> Эффект дыбыстары (сыйлық, соққы, торт)</label>
   </div>
@@ -803,22 +822,46 @@ function currentMood(){
   if (center && center.act === 'wedding') return 'wedding';
   return 'dance';
 }
-let fileEl = null, fileNode = null, fileUrl = null;
+/* ---- өз әндерің: плейлист + той/вальс кезіндегі арнайы ән ---- */
+const lib = {playlist: [], wedding: null, waltz: null};   // {name, blob, url}
+let fileEl = null, fileNode = null, plIdx = 0, playingKey = '', resumeT = 0;
+function hasSongs(){ return lib.playlist.length || lib.wedding || lib.waltz; }
+function wantTrack(){
+  const m = currentMood();
+  if (m === 'wedding' && lib.wedding) return {key: 'wedding', t: lib.wedding, loop: true};
+  if (m === 'waltz' && lib.waltz) return {key: 'waltz', t: lib.waltz, loop: true};
+  if (!lib.playlist.length) return null;
+  plIdx = plIdx % lib.playlist.length;
+  return {key: 'pl' + plIdx + ':' + lib.playlist[plIdx].name, t: lib.playlist[plIdx], loop: lib.playlist.length === 1};
+}
+function playFiles(){
+  if (!fileEl) {
+    fileEl = new Audio(); fileEl.playsInline = true;
+    try { fileNode = AC.createMediaElementSource(fileEl); fileNode.connect(musicBus); } catch {}
+    fileEl.onended = () => { if (playingKey.startsWith('pl')) { plIdx++; resumeT = 0; playingKey = ''; playFiles(); } };
+  }
+  const w = wantTrack();
+  if (!w) { if (!fileEl.paused) fileEl.pause(); playingKey = ''; return; }
+  if (w.key !== playingKey) {
+    if (playingKey.startsWith('pl') && !w.key.startsWith('pl')) resumeT = fileEl.currentTime;   // плейлистке қайтқанда жалғастыру
+    const back = w.key.startsWith('pl') && !playingKey.startsWith('pl') && playingKey;
+    playingKey = w.key; fileEl.src = w.t.url; fileEl.loop = w.loop;
+    if (back && resumeT) { const rt = resumeT; fileEl.addEventListener('loadedmetadata', () => { try { fileEl.currentTime = rt; } catch {} }, {once:true}); }
+    resumeT = back ? resumeT : 0;
+    updateNowPlaying();
+  }
+  if (fileEl.paused) fileEl.play().catch(()=>{});
+}
+function nextSong(){ if (!lib.playlist.length) return; plIdx++; resumeT = 0; playingKey = ''; if (audioCfg().src === 'file') playFiles(); }
 function startMusic(){
   if (!AC || AC.state !== 'running') return;
   const a = audioCfg();
-  if (a.src === 'file' && fileUrl) {
-    musicOn = false;
-    if (!fileEl) { fileEl = new Audio(); fileEl.loop = true; fileEl.crossOrigin = 'anonymous'; fileEl.playsInline = true;
-      try { fileNode = AC.createMediaElementSource(fileEl); fileNode.connect(musicBus); } catch {} }
-    if (fileEl.src !== fileUrl) fileEl.src = fileUrl;
-    if (fileEl.paused) fileEl.play().catch(()=>{});
-    return;
-  }
+  if (a.src === 'file' && hasSongs()) { musicOn = false; playFiles(); return; }
   if (fileEl && !fileEl.paused) fileEl.pause();
-  if (a.src === 'gen' && !musicOn) { musicOn = true; nextStepT = AC.currentTime + 0.1; stepIdx = 0; barIdx = 0; newPhrase(); }
+  if ((a.src === 'gen' || a.src === 'file') && !musicOn) { musicOn = true; nextStepT = AC.currentTime + 0.1; stepIdx = 0; barIdx = 0; newPhrase(); }
   if (a.src === 'off') musicOn = false;
 }
+setInterval(() => { if (AC && AC.state === 'running' && audioCfg().src === 'file' && hasSongs()) playFiles(); }, 700);
 function scheduler(){
   if (!AC || AC.state !== 'running' || !musicOn) return;
   while (nextStepT < AC.currentTime + 0.15) {
@@ -864,14 +907,40 @@ function sfx(kind){
   else if (kind === 'fanfare') { [62, 66, 69, 74].forEach((m,i) => pluck(m, t + i*.11, .6, sfxBus)); [74, 69].forEach((m,i) => pluck(m, t + .5 + i*.02, .5, sfxBus)); }
 }
 
-/* ---- own music file (kept in IndexedDB on this device) ---- */
+/* ---- songs are kept in IndexedDB on this device ---- */
 function idb(){ return new Promise((res, rej) => { try { const r = indexedDB.open('toi', 1); r.onupgradeneeded = () => r.result.createObjectStore('files'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); } catch (e) { rej(e); } }); }
-async function saveMusicFile(file){ try { const db = await idb(); await new Promise((res, rej) => { const tx = db.transaction('files', 'readwrite'); tx.objectStore('files').put({blob: file, name: file.name}, 'music'); tx.oncomplete = res; tx.onerror = () => rej(tx.error); }); } catch {} }
-async function loadMusicFile(){ try { const db = await idb(); return await new Promise(res => { const r = db.transaction('files').objectStore('files').get('music'); r.onsuccess = () => res(r.result || null); r.onerror = () => res(null); }); } catch { return null; } }
-function setFile(blob, name){
-  if (fileUrl) URL.revokeObjectURL(fileUrl);
-  fileUrl = URL.createObjectURL(blob); cfg.mFileName = name; saveCfg();
-  document.getElementById('mFileName').textContent = name || '';
+async function idbPut(key, val){ try { const db = await idb(); await new Promise((res, rej) => { const tx = db.transaction('files', 'readwrite'); tx.objectStore('files').put(val, key); tx.oncomplete = res; tx.onerror = () => rej(tx.error); }); } catch {} }
+async function idbGet(key){ try { const db = await idb(); return await new Promise(res => { const r = db.transaction('files').objectStore('files').get(key); r.onsuccess = () => res(r.result || null); r.onerror = () => res(null); }); } catch { return null; } }
+const strip = t => t && {name: t.name, blob: t.blob};
+function saveLib(){ idbPut('lib', {playlist: lib.playlist.map(strip), wedding: strip(lib.wedding), waltz: strip(lib.waltz)}); }
+const mk = (blob, name) => ({name: String(name || 'ән').replace(/\.[a-z0-9]+$/i, ''), blob, url: URL.createObjectURL(blob)});
+async function loadLib(){
+  const d = await idbGet('lib');
+  if (d) { lib.playlist = (d.playlist || []).filter(x => x && x.blob).map(x => mk(x.blob, x.name));
+           lib.wedding = d.wedding && d.wedding.blob ? mk(d.wedding.blob, d.wedding.name) : null;
+           lib.waltz = d.waltz && d.waltz.blob ? mk(d.waltz.blob, d.waltz.name) : null; }
+  else { const old = await idbGet('music'); if (old && old.blob) { lib.playlist = [mk(old.blob, old.name)]; saveLib(); } }
+  renderSongs(); startMusic();
+}
+function updateNowPlaying(){
+  const el = document.getElementById('nowPlaying'); if (!el) return;
+  const w = wantTrack(); el.textContent = w && audioCfg().src === 'file' ? '▶ ' + w.t.name : '';
+}
+function renderSongs(){
+  const ul = document.getElementById('songList'); ul.innerHTML = '';
+  lib.playlist.forEach((t, i) => {
+    const li = document.createElement('div'); li.className = 'song';
+    li.innerHTML = `<span>${i+1}. ${esc(t.name)}</span>`;
+    const x = document.createElement('button'); x.textContent = '✕'; x.className = 'x';
+    x.onclick = () => { URL.revokeObjectURL(t.url); lib.playlist.splice(i, 1); if (plIdx >= i) plIdx = Math.max(0, plIdx - 1); playingKey = ''; saveLib(); renderSongs(); startMusic(); };
+    li.appendChild(x); ul.appendChild(li);
+  });
+  if (!lib.playlist.length) ul.innerHTML = '<div class="song dim">Әзірге ән жоқ — «➕ Ән қосу» бас</div>';
+  for (const k of ['wedding', 'waltz']) {
+    document.getElementById(k + 'Name').textContent = lib[k] ? lib[k].name : 'таңдалмаған (домбыра/плейлист)';
+    document.getElementById(k + 'Del').style.display = lib[k] ? 'inline-block' : 'none';
+  }
+  updateNowPlaying();
 }
 
 /* ---- music controls ---- */
@@ -881,14 +950,24 @@ function syncMusicUI(){
   document.getElementById('mVol').value = a.vol;
   document.getElementById('mSfx').checked = a.sfx;
   document.getElementById('mFileRow').style.display = a.src === 'file' ? 'block' : 'none';
-  document.getElementById('mFileName').textContent = fileUrl ? (cfg.mFileName || '') : (a.src === 'file' ? 'файл таңдалмаған' : '');
   document.getElementById('tMusic').textContent = a.src === 'off' ? '🔇 Музыка' : '🔊 Музыка';
+  updateNowPlaying();
 }
 document.getElementById('mSrc').onchange = e => { cfg.mSrc = e.target.value; saveCfg(); syncMusicUI(); applyVolume(); ensureAudio(); startMusic(); updateTapPill(); };
 document.getElementById('mVol').oninput = e => { cfg.mVol = +e.target.value; saveCfg(); applyVolume(); };
 document.getElementById('mSfx').onchange = e => { cfg.mSfx = e.target.checked; saveCfg(); applyVolume(); };
-document.getElementById('mFile').onchange = e => { const f = e.target.files[0]; if (!f) return; setFile(f, f.name); saveMusicFile(f); cfg.mSrc = 'file'; saveCfg(); syncMusicUI(); ensureAudio(); startMusic(); };
-document.getElementById('tMusic').onclick = () => { cfg.mSrc = audioCfg().src === 'off' ? (fileUrl ? 'file' : 'gen') : 'off'; saveCfg(); syncMusicUI(); applyVolume(); ensureAudio(); startMusic(); };
+document.getElementById('mAdd').onchange = e => {
+  const fs = [...e.target.files]; if (!fs.length) return;
+  for (const f of fs) lib.playlist.push(mk(f, f.name));
+  e.target.value = ''; cfg.mSrc = 'file'; saveCfg(); saveLib(); renderSongs(); syncMusicUI(); ensureAudio(); startMusic();
+};
+for (const k of ['wedding', 'waltz']) {
+  document.getElementById(k + 'File').onchange = e => { const f = e.target.files[0]; if (!f) return; if (lib[k]) URL.revokeObjectURL(lib[k].url); lib[k] = mk(f, f.name); e.target.value = ''; cfg.mSrc = 'file'; saveCfg(); saveLib(); renderSongs(); syncMusicUI(); ensureAudio(); startMusic(); };
+  document.getElementById(k + 'Del').onclick = () => { if (lib[k]) URL.revokeObjectURL(lib[k].url); lib[k] = null; playingKey = ''; saveLib(); renderSongs(); startMusic(); };
+}
+document.getElementById('mNext').onclick = () => nextSong();
+document.getElementById('tNext').onclick = () => nextSong();
+document.getElementById('tMusic').onclick = () => { cfg.mSrc = audioCfg().src === 'off' ? (hasSongs() ? 'file' : 'gen') : 'off'; saveCfg(); syncMusicUI(); applyVolume(); ensureAudio(); startMusic(); };
 
 /* ---------------- live connection ----------------
    2 режим:
@@ -1114,7 +1193,7 @@ function updateTest(){
 resize();
 updateTest();
 syncMusicUI();
-loadMusicFile().then(r => { if (r && r.blob) { setFile(r.blob, r.name); syncMusicUI(); startMusic(); } });
+loadLib();
 try { ensureAudio(); startMusic(); } catch {}
 updateTapPill();
 if (mode() === 'none' && !ONCLAUDE && !params.has('test') && !params.has('clean')) openSetup();
