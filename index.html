@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Қазақ тойы — TikTok Live ойыны</title>
+<style>
+  html,body{margin:0;height:100%;background:#0d0d12;overflow:hidden;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;-webkit-user-select:none;user-select:none}
+  #wrap{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);overflow:hidden}
+  #cv{position:absolute;inset:0;width:100%;height:100%;display:block}
+  #hud{position:absolute;inset:0;pointer-events:none}
+  /* ---- top panel (1em = 10 game units, game = 540x960) ---- */
+  #panel{position:absolute;left:1.4em;right:1.4em;top:5.6em}
+  #title{position:relative;background:linear-gradient(#1b2a6b,#0f1640);border:.35em solid #e9c24d;
+    border-radius:1.2em;text-align:center;padding:.4em 0 .7em;box-shadow:0 .4em 1.2em rgba(0,0,0,.5)}
+  #title h1{margin:0;font-size:4.2em;line-height:1;letter-spacing:.04em;font-weight:900;
+    color:#ffd75e;text-shadow:0 .06em 0 #8a5b00,0 .1em .25em rgba(0,0,0,.6);
+    -webkit-text-stroke:.012em #6b3d00}
+  #title .sub{font-size:1.9em;font-weight:800;color:#fff;margin-top:.15em}
+  #gifts{display:grid;grid-template-columns:1fr 1fr;gap:.55em;margin-top:.6em}
+  .g{display:flex;align-items:center;gap:.5em;background:linear-gradient(#25357d,#151e52);
+    border:.2em solid #e9c24d;border-radius:.9em;padding:.35em .6em;min-height:3.6em}
+  .g .ic{font-size:2.4em;line-height:1;filter:drop-shadow(0 .05em .05em rgba(0,0,0,.5))}
+  .g .tx{flex:1;min-width:0}
+  .g .nm{display:flex;justify-content:space-between;align-items:center;gap:.3em;font-weight:900;white-space:nowrap;letter-spacing:-.02em;
+    color:#ffd75e;font-size:1.55em;line-height:1.05}
+  .g .cn{background:#fff;color:#1b2a6b;border-radius:1em;font-size:.72em;padding:.05em .45em;font-weight:900}
+  .g .ds{color:#fff;font-size:1.05em;font-weight:700;line-height:1.15;margin-top:.15em}
+  #lead{margin-top:.55em;background:rgba(10,14,40,.8);border:.15em solid rgba(233,194,77,.7);
+    border-radius:.9em;color:#fff;font-size:1.25em;font-weight:700;padding:.3em .7em;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:none}
+  #lead b{color:#ffd75e}
+  #banner{position:absolute;left:50%;top:19.7em;transform:translateX(-50%) scale(.9);opacity:0;
+    transition:opacity .25s,transform .25s;background:linear-gradient(#1b2a6b,#0f1640);
+    border:.25em solid #ffd75e;border-radius:2em;color:#fff;font-weight:900;font-size:1.7em;
+    padding:.25em 1em;white-space:nowrap;max-width:46em;overflow:hidden;text-overflow:ellipsis;
+    box-shadow:0 .3em 1em rgba(0,0,0,.5)}
+  #banner.on{opacity:1;transform:translateX(-50%) scale(1)}
+  #banner .y{color:#ffd75e}
+  #queue{position:absolute;right:1.6em;top:30.8em;color:#fff;font-size:1.25em;font-weight:800;
+    background:rgba(0,0,0,.45);padding:.2em .6em;border-radius:1em;display:none}
+  /* ---- test panel ---- */
+  #test{position:absolute;left:0;right:0;bottom:0;pointer-events:auto;background:rgba(8,8,16,.86);
+    border-top:.15em solid #e9c24d;padding:.6em .8em .9em;display:none;font-size:1em}
+  #test .row{display:flex;flex-wrap:wrap;gap:.45em;margin-top:.45em}
+  #test button{font:inherit;font-size:1.35em;font-weight:800;border:0;border-radius:.6em;
+    padding:.45em .7em;background:#25357d;color:#fff;cursor:pointer}
+  #test button:active{transform:scale(.95)}
+  #test button.alt{background:#3c3c4a}
+  #test button.on{background:#1d7a46}
+  #status{color:#ffd75e;font-size:1.25em;font-weight:700}
+  #hideTest{float:right;background:none!important;padding:0 .3em!important;color:#aaa!important}
+  #corner{position:absolute;left:0;top:0;width:7em;height:7em;z-index:5}
+  #setup{position:fixed;inset:0;background:rgba(0,0,0,.78);display:none;align-items:center;justify-content:center;z-index:50}
+  #setup .card{background:linear-gradient(#1b2a6b,#0f1640);border:3px solid #e9c24d;border-radius:16px;padding:18px 20px;
+    width:min(88vw,420px);color:#fff;font-size:16px;box-shadow:0 10px 40px rgba(0,0,0,.6)}
+  #setup h2{margin:0 0 12px;color:#ffd75e;font-size:21px}
+  #setup label{display:block;font-weight:700;margin-bottom:10px}
+  #setup input{display:block;width:100%;box-sizing:border-box;font-size:16px;padding:11px 12px;margin-top:5px;border:0;border-radius:9px}
+  #setup .hint{font-size:13.5px;color:#cfd6ff;line-height:1.4;margin:6px 0}
+  #setup a{color:#ffd75e}
+  #setup #sErr{color:#ff8a8a;font-weight:700;min-height:1em;margin:4px 0}
+  #setup button{font-size:17px;font-weight:800;border:0;border-radius:10px;padding:12px 14px;background:#e9c24d;color:#151e52;width:100%;margin-top:8px;cursor:pointer}
+  #setup button.alt{background:#3c3c4a;color:#fff}
+  #dbg{position:fixed;left:0;right:0;top:0;max-height:45vh;overflow:auto;background:rgba(0,0,0,.82);color:#9f9;
+    font:11px/1.35 ui-monospace,Menlo,monospace;padding:6px;z-index:40;pointer-events:none;word-break:break-all}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="cv"></canvas>
+  <div id="corner"></div>
+  <div id="hud">
+    <div id="panel">
+      <div id="title"><h1>ҚАЗАҚ ТОЙЫ</h1><div class="sub">Раушан жібер — биге шық!</div></div>
+      <div id="gifts"></div>
+      <div id="lead"></div>
+    </div>
+    <div id="banner"></div>
+    <div id="queue"></div>
+  </div>
+  <div id="test">
+    <button id="hideTest" title="Жасыру">✕</button>
+    <div id="status">Тест режимі</div>
+    <div class="row" id="testGifts"></div>
+    <div class="row">
+      <button class="alt" id="tChat">💬 Пікір</button>
+      <button class="alt" id="tJoin">👋 Біреу кірді</button>
+      <button class="alt" id="tLike">❤️ Лайк</button>
+      <button class="alt" id="tMulti">×1</button>
+      <button class="alt" id="tAuto">▶ Авто-демо</button>
+      <button class="alt" id="tSetup">⚙️ Баптау</button>
+    </div>
+  </div>
+</div>
+
+<div id="setup"><div class="card">
+  <h2>⚙️ Қазақ тойы — баптау</h2>
+  <label>TikTok логинің<input id="sUser" placeholder="@login" autocapitalize="off" autocorrect="off" spellcheck="false"></label>
+  <label>Euler Stream API кілті<input id="sKey" placeholder="API key" autocapitalize="off" autocorrect="off" spellcheck="false"></label>
+  <p class="hint">Кілтті тегін аласың: <a href="https://www.eulerstream.com" target="_blank" rel="noopener">eulerstream.com</a> → тіркел → Dashboard → API key жаса. Кілт тек осы құрылғыда сақталады.</p>
+  <p class="hint" id="sNote" style="display:none">⚠️ Бұл алдын ала көру беті эфирге қосыла алмайды — GitHub Pages сілтемесін аш.</p>
+  <p id="sErr"></p>
+  <button id="sGo">▶ Эфирге қосылу</button>
+  <button id="sTest" class="alt">🧪 Тек тест</button>
+</div></div>
+<script>
+"use strict";
+/* =====================================================================
+   БАПТАУЛАР — сыйлық → әрекет. names: TikTok сыйлық атауы (кіші әріппен),
+   coins: атауы табылмаса, бағасы бойынша сәйкестендіріледі.
+   ===================================================================== */
+const GIFTS = [
+  {act:'dance',   label:'БИ',             icon:'🌹', coins:1,   sec:60,  names:['rose','роза','раушан'],                 desc:'Раушан = 1 минут биге шығасың', verb:'биге шықты!'},
+  {act:'toast',   label:'ТОСТ',           icon:'🍩', coins:30,  sec:40,  names:['doughnut','donut','пончик'],            desc:'Пончик = 40 сек тост айтасың',  verb:'тост айтады!'},
+  {act:'fight',   label:'ТӨБЕЛЕС',        icon:'👑', coins:100, sec:20,  names:['crown','корона'],                       desc:'Корона = 20 сек төбелес',       verb:'төбелесті бастады!'},
+  {act:'cake',    label:'ТОРТ',           icon:'🎩', coins:99,  sec:20,  names:['hat and mustache','cap','шляпа и усы','шляпа'], desc:'Шляпа = 20 сек торт лақтыру', verb:'торт лақтырады!'},
+  {act:'wedding', label:'КҮЙЕУ-ҚАЛЫҢДЫҚ', icon:'🫶', coins:100, sec:180, names:['hand hearts','сердце из рук'],          desc:'Жүрек = 3 минут той сенікі',    verb:'тойдың иесі болды!'},
+  {act:'waltz',   label:'ВАЛЬС',          icon:'💸', coins:500, sec:25,  names:['money gun','деньгопушка'],              desc:'Деньгопушка = 25 сек вальс',    verb:'вальс билейді!'},
+];
+const MAX_GUESTS = 26;            // сахнадағы ең көп адам
+const IDLE_LEAVE_MS = 4*60*1000;  // әрекетсіз адам 4 минуттан соң кетеді
+
+const TOASTS = ['Жастарға бақыт тілеймін!','Шаңырақтарың биік болсын!','Қос аққудай қосылыңдар!',
+  'Ата-аналарға рахмет!','Той құтты болсын!','Махаббаттарың мәңгі болсын!','Балалы-шағалы болыңдар!',
+  'Бір жастыққа бас қойып, қартайыңдар!','Көш алды болыңдар!'];
+
+/* ===================================================================== */
+const W = 540, H = 960;
+const FLOOR = {cx:270, cy:700, rx:240, ry:118};
+const params = new URLSearchParams(location.search);
+const wrap = document.getElementById('wrap');
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+let scale = 1, bg = null;
+const now = () => performance.now();
+const rand = (a,b) => a + Math.random()*(b-a);
+const pick = arr => arr[Math.floor(Math.random()*arr.length)];
+function hash(s){let h=2166136261;for(const c of String(s)){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function short(s,n){s=String(s||'');return s.length>n?s.slice(0,n-1)+'…':s}
+
+/* ---------------- layout ---------------- */
+function resize(){
+  const w = innerWidth, h = innerHeight;
+  const cw = Math.min(w, h*9/16), ch = cw*16/9;
+  wrap.style.width = cw+'px'; wrap.style.height = ch+'px';
+  wrap.style.fontSize = (cw/54)+'px';
+  const dpr = Math.min(2, window.devicePixelRatio||1);
+  cv.width = Math.round(cw*dpr); cv.height = Math.round(ch*dpr);
+  scale = cv.width / W;
+  bg = renderBackground();
+}
+addEventListener('resize', resize);
+
+/* ---------------- gift legend ---------------- */
+document.getElementById('gifts').innerHTML = GIFTS.map(g =>
+  `<div class="g"><div class="ic">${g.icon}</div><div class="tx">
+     <div class="nm"><span>${g.label}</span><span class="cn">${g.coins}</span></div>
+     <div class="ds">${g.desc}</div></div></div>`).join('');
+
+/* ---------------- background ---------------- */
+function rr(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath()}
+function renderBackground(){
+  const b = document.createElement('canvas'); b.width = cv.width; b.height = cv.height;
+  const c = b.getContext('2d'); c.setTransform(scale,0,0,scale,0,0);
+  // wall
+  let g = c.createLinearGradient(0,0,0,600);
+  g.addColorStop(0,'#2a0b18'); g.addColorStop(1,'#6e2434');
+  c.fillStyle = g; c.fillRect(0,0,W,600);
+  // ornament band (қошқар мүйіз motif)
+  c.strokeStyle = 'rgba(233,194,77,.45)'; c.lineWidth = 2;
+  for (let x = 10; x < W; x += 40) {
+    const y = 470;
+    c.beginPath(); c.moveTo(x, y+10); c.bezierCurveTo(x, y-6, x+14, y-6, x+14, y+4);
+    c.bezierCurveTo(x+14, y+10, x+8, y+10, x+8, y+5); c.stroke();
+    c.beginPath(); c.moveTo(x+40, y+10); c.bezierCurveTo(x+40, y-6, x+26, y-6, x+26, y+4);
+    c.bezierCurveTo(x+26, y+10, x+32, y+10, x+32, y+5); c.stroke();
+  }
+  c.fillStyle = 'rgba(233,194,77,.35)'; c.fillRect(0,488,W,3); c.fillRect(0,452,W,2);
+  // chandeliers
+  for (const [x,y] of [[115,350],[270,330],[425,350]]) {
+    const gl = c.createRadialGradient(x,y,2,x,y,70);
+    gl.addColorStop(0,'rgba(255,230,160,.55)'); gl.addColorStop(1,'rgba(255,230,160,0)');
+    c.fillStyle = gl; c.beginPath(); c.arc(x,y,70,0,7); c.fill();
+    c.strokeStyle = '#e9c24d'; c.lineWidth = 2;
+    c.beginPath(); c.moveTo(x,290); c.lineTo(x,y-14); c.stroke();
+    c.beginPath(); c.ellipse(x,y,30,9,0,0,Math.PI); c.stroke();
+    for (let i=-2;i<=2;i++){ c.fillStyle='#fff3c4'; c.beginPath(); c.arc(x+i*14,y+4-Math.abs(i)*2,3.5,0,7); c.fill();
+      c.strokeStyle='rgba(255,243,196,.6)'; c.beginPath(); c.moveTo(x+i*14,y+8); c.lineTo(x+i*14,y+20); c.stroke(); }
+  }
+  // floor
+  g = c.createLinearGradient(0,560,0,H);
+  g.addColorStop(0,'#4a2016'); g.addColorStop(1,'#2b120c');
+  c.fillStyle = g; c.fillRect(0,560,W,H-560);
+  c.fillStyle = 'rgba(0,0,0,.35)'; c.fillRect(0,556,W,6);
+  // dance floor
+  const {cx,cy,rx,ry} = FLOOR;
+  c.save(); c.translate(cx,cy); c.scale(1,ry/rx);
+  g = c.createRadialGradient(0,0,10,0,0,rx);
+  g.addColorStop(0,'#7a3b22'); g.addColorStop(.75,'#4b2214'); g.addColorStop(1,'#2e140b');
+  c.fillStyle = g; c.beginPath(); c.arc(0,0,rx,0,7); c.fill();
+  c.strokeStyle = '#e9c24d'; c.lineWidth = 6; c.beginPath(); c.arc(0,0,rx-6,0,7); c.stroke();
+  c.lineWidth = 2; c.beginPath(); c.arc(0,0,rx-18,0,7); c.stroke();
+  c.beginPath(); c.arc(0,0,rx*0.42,0,7); c.stroke();
+  for (let i=0;i<24;i++){ const a=i/24*Math.PI*2; c.save(); c.rotate(a); c.translate(rx-12,0);
+    c.fillStyle='#e9c24d'; c.beginPath(); c.moveTo(0,-5); c.lineTo(5,0); c.lineTo(0,5); c.lineTo(-5,0); c.fill(); c.restore(); }
+  // center medallion: 4 horns
+  c.strokeStyle='rgba(233,194,77,.8)'; c.lineWidth=3;
+  for (let i=0;i<4;i++){ c.save(); c.rotate(i*Math.PI/2);
+    c.beginPath(); c.moveTo(0,0); c.bezierCurveTo(30,-5,40,-35,20,-40); c.bezierCurveTo(8,-42,6,-28,16,-26); c.stroke(); c.restore(); }
+  c.restore();
+  // plaques
+  for (const [x,t] of [[150,'КҮЙЕУ'],[390,'ҚАЛЫҢДЫҚ']]) {
+    c.font = '900 15px system-ui,sans-serif'; const w = c.measureText(t).width + 20;
+    c.fillStyle = '#1b2a6b'; rr(c,x-w/2,592,w,22,6); c.fill();
+    c.strokeStyle = '#e9c24d'; c.lineWidth = 2; c.stroke();
+    c.fillStyle = '#ffd75e'; c.textAlign='center'; c.textBaseline='middle'; c.fillText(t,x,604);
+  }
+  // flower arch with banner
+  c.strokeStyle = '#f6d9e4'; c.lineWidth = 10;
+  c.beginPath(); c.moveTo(120,585); c.quadraticCurveTo(270,470,420,585); c.stroke();
+  for (let i=0;i<=22;i++){ const t=i/22, x=(1-t)*(1-t)*120+2*(1-t)*t*270+t*t*420, y=(1-t)*(1-t)*585+2*(1-t)*t*470+t*t*585;
+    c.fillStyle = i%3===0?'#ff7aa8':(i%3===1?'#ffffff':'#ffc2d6'); c.beginPath(); c.arc(x,y,7,0,7); c.fill();
+    c.fillStyle = '#ffe27a'; c.beginPath(); c.arc(x,y,2,0,7); c.fill(); }
+  c.fillStyle = '#ffe9f0'; rr(c,160,515,220,32,16); c.fill();
+  c.strokeStyle = '#e46a96'; c.lineWidth = 3; c.stroke();
+  c.fillStyle = '#9b1b3f'; c.font = 'italic 900 21px Georgia,serif'; c.textAlign='center'; c.textBaseline='middle';
+  c.fillText('Бақытты болыңдар!', 270, 532);
+  // curtains
+  for (const side of [0,1]) {
+    c.save(); if (side) { c.translate(W,0); c.scale(-1,1); }
+    for (let i=0;i<5;i++){ const x=i*11;
+      const cg=c.createLinearGradient(x,0,x+11,0); cg.addColorStop(0,'#7d0d1b'); cg.addColorStop(.5,'#c2192d'); cg.addColorStop(1,'#7d0d1b');
+      c.fillStyle=cg; c.beginPath(); c.moveTo(x,290); c.lineTo(x+11,290); c.lineTo(x+11+i*2,900); c.lineTo(x+i*2,900); c.fill(); }
+    c.fillStyle='#e9c24d'; c.fillRect(0,640,64,6);
+    c.restore();
+  }
+  // tables at the bottom
+  for (const [x,y,r] of [[50,905,70],[490,905,70],[270,955,95]]) {
+    c.fillStyle='rgba(0,0,0,.35)'; c.beginPath(); c.ellipse(x,y+10,r,r*0.32,0,0,7); c.fill();
+    c.fillStyle='#fbf6ee'; c.beginPath(); c.ellipse(x,y,r,r*0.3,0,0,7); c.fill();
+    c.strokeStyle='#e9c24d'; c.lineWidth=2; c.stroke();
+    for (let i=0;i<6;i++){ const a=i/6*Math.PI*2; const px=x+Math.cos(a)*r*0.6, py=y+Math.sin(a)*r*0.18;
+      c.fillStyle='#ffffff'; c.beginPath(); c.ellipse(px,py,9,3.5,0,0,7); c.fill();
+      c.strokeStyle='#d9c08a'; c.lineWidth=1; c.stroke();
+      c.fillStyle=['#e7a23a','#c8432f','#6aa84f'][i%3]; c.beginPath(); c.ellipse(px,py-1,5,2,0,0,7); c.fill(); }
+  }
+  return b;
+}
+
+/* ---------------- people ---------------- */
+const ROBES = ['#1f4fa3','#b3202a','#1d7a46','#6a2c91','#c77d12','#0f6b78','#7a1f3d','#2f3c8f','#a0522d'];
+const SKINS = ['#f1c9a5','#e6b58f','#d8a27a'];
+const people = new Map();
+const slots = Array.from({length: MAX_GUESTS}, (_,i) => {
+  const a = Math.PI*0.5 + (i/MAX_GUESTS)*Math.PI*2 + 0.12;
+  return {x: FLOOR.cx + Math.cos(a)*(FLOOR.rx-26), y: FLOOR.cy + Math.sin(a)*(FLOOR.ry-14), used:null};
+});
+let npcSeq = 0;
+
+function freeSlot(){
+  // prefer back/side slots, keep it evenly filled
+  const free = slots.map((s,i)=>i).filter(i=>!slots[i].used);
+  return free.length ? pick(free) : -1;
+}
+function makePerson(id, nick, opt={}){
+  const h = hash(id);
+  const p = {
+    id, nick: nick || id, npc: !!opt.npc, gender: opt.gender || (h % 2 ? 'm' : 'f'),
+    robe: ROBES[h % ROBES.length], vest: ROBES[(h>>4) % ROBES.length], skin: SKINS[(h>>7)%3],
+    x: rand(230,310), y: 985, tx: 270, ty: 900, face: 1, act:'idle', end:0, started:0,
+    partner:null, leader:null, bubble:null, cream:0, slot:-1, last: now(), seed: Math.random()*10,
+    leaving:false, pending:null, role:null, nextThrow:0, nextFx:0,
+  };
+  if (opt.x != null) { p.x = opt.x; p.y = opt.y; }
+  if (!p.npc) { p.slot = freeSlot(); if (p.slot >= 0) slots[p.slot].used = id; }
+  goIdle(p);
+  people.set(id, p);
+  return p;
+}
+function guestCount(){ let n=0; for (const p of people.values()) if (!p.npc && !p.leaving) n++; return n; }
+function ensurePerson(id, nick, force){
+  let p = people.get(id);
+  if (p && !p.leaving) { if (nick) p.nick = nick; p.last = now(); return p; }
+  if (p && p.leaving) { p.leaving = false; p.last = now(); if (p.slot<0){p.slot=freeSlot(); if(p.slot>=0) slots[p.slot].used=id;} goIdle(p); return p; }
+  if (guestCount() >= MAX_GUESTS) {
+    if (!force) return null;
+    let oldest = null;
+    for (const q of people.values()) if (!q.npc && !q.leaving && q.act==='idle' && (!oldest || q.last < oldest.last)) oldest = q;
+    if (!oldest) return null;
+    leave(oldest);
+  }
+  return makePerson(id, nick);
+}
+function leave(p){
+  releasePartner(p);
+  p.leaving = true; p.act = 'idle'; p.tx = rand(240,300); p.ty = 1010;
+  if (p.slot >= 0) { slots[p.slot].used = null; p.slot = -1; }
+}
+function goIdle(p){
+  p.act = 'idle'; p.role = null; p.leader = null;
+  if (p.npc) { leave(p); return; }
+  if (p.slot < 0) { p.slot = freeSlot(); if (p.slot>=0) slots[p.slot].used = p.id; }
+  const s = slots[p.slot] || {x: rand(120,420), y: rand(760,800)};
+  p.tx = s.x + rand(-6,6); p.ty = s.y + rand(-4,4);
+}
+function floorPoint(k=0.62){
+  const a = Math.random()*Math.PI*2, r = 0.3 + Math.sqrt(Math.random())*(k-0.3);
+  return {x: FLOOR.cx + Math.cos(a)*FLOOR.rx*r, y: FLOOR.cy + Math.sin(a)*FLOOR.ry*r};
+}
+function pickPartner(p, gender, npcName){
+  const c = [...people.values()].filter(q => q!==p && !q.npc && !q.leaving && (q.act==='idle' || q.act==='dance') && !isCenter(q));
+  let pool = gender ? c.filter(q=>q.gender===gender) : c;
+  if (!pool.length) pool = gender ? [] : c;
+  const idle = pool.filter(q => q.act === 'idle'); if (idle.length) pool = idle;
+  let q = pool.length ? pick(pool) : null;
+  if (!q) {
+    q = makePerson('npc_'+(++npcSeq), npcName, {npc:true, gender: gender || (Math.random()<.5?'m':'f'), x: rand(200,340), y: 985});
+  }
+  releasePartner(q);
+  q.act = 'partner'; q.leader = p.id; q.last = now();
+  p.partner = q.id;
+  return q;
+}
+function releasePartner(p){
+  if (p.partner) { const q = people.get(p.partner); p.partner = null; if (q && q.leader === p.id) goIdle(q); }
+  if (p.leader) { const l = people.get(p.leader); if (l && l.partner === p.id) l.partner = null; p.leader = null; }
+}
+
+/* ---------------- center stage (toast / wedding) ---------------- */
+let center = null; const centerQueue = [];
+function isCenter(p){ return center && (center.id === p.id || center.partner === p.id); }
+function enqueueCenter(p, act, dur){
+  if (center && center.id === p.id && center.act === act) { center.end += dur; return; }
+  const q = centerQueue.find(e => e.id === p.id && e.act === act);
+  if (q) { q.dur += dur; return; }
+  if (!center) startCenter({id:p.id, act, dur}); else centerQueue.push({id:p.id, act, dur});
+  updateQueue();
+}
+function startCenter(e){
+  const p = people.get(e.id); if (!p || p.leaving) { nextCenter(); return; }
+  releasePartner(p);
+  center = {id:p.id, act:e.act, end: now()+e.dur, partner:null};
+  p.act = e.act; p.started = now(); p.end = center.end; p.last = now();
+  if (e.act === 'toast') {
+    p.tx = FLOOR.cx; p.ty = FLOOR.cy - 10; p.nextFx = 0;
+  } else {
+    const want = p.gender === 'm' ? 'f' : 'm';
+    const q = pickPartner(p, want, want === 'f' ? 'Қалыңдық' : 'Күйеу');
+    center.partner = q.id;
+    const groom = p.gender === 'm' ? p : q, bride = groom === p ? q : p;
+    groom.role = 'groom'; bride.role = 'bride';
+    groom.tx = FLOOR.cx - 22; groom.ty = FLOOR.cy; bride.tx = FLOOR.cx + 22; bride.ty = FLOOR.cy;
+  }
+  updateQueue();
+}
+function nextCenter(){
+  center = null;
+  while (centerQueue.length) { const e = centerQueue.shift(); if (people.has(e.id)) { startCenter(e); return; } }
+  updateQueue();
+}
+function endCenter(){
+  const p = people.get(center.id);
+  if (p) {
+    p.role = null; releasePartner(p); goIdle(p);
+    if (p.pending) { const pd = p.pending; p.pending = null; setAction(p, pd.act, pd.dur); }
+  }
+  nextCenter();
+}
+function updateQueue(){
+  const el = document.getElementById('queue');
+  if (centerQueue.length) { el.style.display='block'; el.textContent = '⏳ Кезекте: ' + centerQueue.length; }
+  else el.style.display='none';
+}
+
+/* ---------------- actions ---------------- */
+function matchGift(name, coins){
+  const n = String(name||'').toLowerCase().trim();
+  return GIFTS.find(g => g.names.includes(n)) || GIFTS.find(g => g.coins === coins) || null;
+}
+function setAction(p, act, dur){
+  if (isCenter(p)) { p.pending = {act, dur}; return; }
+  if (p.act === act && p.end > now()) { p.end += dur; syncPartner(p); return; }
+  releasePartner(p);
+  p.act = act; p.started = now(); p.end = now() + dur; p.last = now(); p.nextThrow = now()+600; p.nextFx = 0;
+  if (act === 'dance') { const f = floorPoint(); p.tx = f.x; p.ty = f.y; }
+  else if (act === 'fight') {
+    const q = pickPartner(p, null, 'Жезде'); const f = floorPoint(0.45);
+    p.tx = f.x - 26; p.ty = f.y; q.tx = f.x + 26; q.ty = f.y;
+  } else if (act === 'waltz') {
+    pickPartner(p, p.gender === 'm' ? 'f' : 'm', p.gender === 'm' ? 'Әсем' : 'Ержан');
+    p.wphase = Math.random()*Math.PI*2;
+  } else if (act === 'cake') { const f = floorPoint(0.5); p.tx = f.x; p.ty = f.y; }
+}
+function syncPartner(p){ /* partner follows leader's end automatically */ }
+
+function giftAction(uid, nick, giftName, coins, count){
+  count = Math.max(1, count|0 || 1); coins = +coins || 0;
+  const p = ensurePerson(uid, nick, true); if (!p) return;
+  const g = matchGift(giftName, coins);
+  const act = g ? g.act : 'dance';
+  const dur = (g ? g.sec : Math.max(10, coins*2)) * 1000 * count;
+  addScore(p, coins * count);
+  banner(`${g ? g.icon : '🎁'} <span class="y">${esc(short(p.nick,16))}</span> ${g ? g.verb : 'биге шықты!'}${count>1?' ×'+count:''}`);
+  burst(p.x, p.y-60, g ? g.icon : '🎁', 6);
+  if (act === 'toast' || act === 'wedding') enqueueCenter(p, act, dur);
+  else setAction(p, act, dur);
+}
+function chatAction(uid, nick, text){
+  const p = ensurePerson(uid, nick, false); if (!p) return;
+  p.bubble = {text: short(text, 46), until: now() + 6000, kind:'chat'};
+}
+function joinAction(uid, nick){ ensurePerson(uid, nick, false); }
+let lastLike = 0;
+function likeAction(uid, nick, n){
+  const t = now(); if (t - lastLike < 250) return; lastLike = t;
+  const p = people.get(uid);
+  const x = p ? p.x : rand(80,460), y = p ? p.y-90 : rand(640,820);
+  for (let i=0;i<Math.min(4, n||1);i++) particles.push({k:'emoji', ch:'❤️', x:x+rand(-10,10), y, vx:rand(-15,15), vy:rand(-70,-40), born:t, life:1600, size:16});
+}
+
+/* ---------------- scores ---------------- */
+const scores = new Map();
+function addScore(p, v){
+  if (!v) return;
+  const s = scores.get(p.id) || {nick:p.nick, v:0}; s.v += v; s.nick = p.nick; scores.set(p.id, s);
+  const top = [...scores.values()].sort((a,b)=>b.v-a.v).slice(0,3);
+  const el = document.getElementById('lead'); el.style.display = 'block';
+  el.innerHTML = '🏆 Тойдың демеушілері: ' + top.map((s,i)=>`<b>${i+1}.</b> ${esc(short(s.nick,12))} <b>${s.v}</b>`).join(' &nbsp; ');
+}
+
+/* ---------------- banners ---------------- */
+const bannerQ = []; let bannerBusy = false;
+function banner(html){ bannerQ.push(html); if (bannerQ.length > 5) bannerQ.shift(); if (!bannerBusy) nextBanner(); }
+function nextBanner(){
+  const el = document.getElementById('banner');
+  if (!bannerQ.length) { bannerBusy = false; el.classList.remove('on'); return; }
+  bannerBusy = true; el.innerHTML = bannerQ.shift(); el.classList.add('on');
+  setTimeout(() => { el.classList.remove('on'); setTimeout(nextBanner, 280); }, bannerQ.length ? 1700 : 2600);
+}
+
+/* ---------------- particles ---------------- */
+let particles = [];
+function burst(x, y, ch, n){ const t=now(); for (let i=0;i<n;i++) particles.push({k:'emoji', ch, x, y, vx:rand(-70,70), vy:rand(-120,-40), g:140, born:t, life:1200, size:rand(14,20)}); }
+function confetti(x, y, n){ const t=now(); const cols=['#ffd75e','#ff7aa8','#7ad3ff','#9cff7a','#ffffff'];
+  for (let i=0;i<n;i++) particles.push({k:'conf', x, y, vx:rand(-90,90), vy:rand(-180,-60), g:200, born:t, life:1800, c:pick(cols), r:rand(0,6), vr:rand(-8,8)}); }
+
+/* ---------------- update ---------------- */
+let wedding = false;
+function update(dt, t){
+  wedding = !!(center && center.act === 'wedding');
+  if (center && t > center.end) endCenter();
+  for (const p of [...people.values()]) {
+    // finish timed actions
+    if (!isCenter(p) && ['dance','fight','waltz','cake'].includes(p.act) && t > p.end) {
+      releasePartner(p); goIdle(p);
+      if (p.pending) { const pd=p.pending; p.pending=null; setAction(p, pd.act, pd.dur); }
+    }
+    if (p.act === 'partner') { const l = people.get(p.leader); if (!l || l.partner !== p.id) goIdle(p); }
+    // auto leave when idle for long
+    if (!p.npc && !p.leaving && p.act === 'idle' && t - p.last > IDLE_LEAVE_MS && guestCount() > 8) leave(p);
+
+    // per-action behaviour
+    if (p.act === 'waltz') {
+      const q = people.get(p.partner);
+      const a = t/1000*0.5 + p.wphase;
+      const bx = FLOOR.cx + Math.cos(a)*FLOOR.rx*0.45, by = FLOOR.cy + Math.sin(a)*FLOOR.ry*0.45;
+      const s = t/1000*3.2;
+      p.tx = bx + Math.cos(s)*18; p.ty = by + Math.sin(s)*7;
+      if (q) { q.tx = bx - Math.cos(s)*18; q.ty = by - Math.sin(s)*7; }
+      if (t > p.nextFx) { p.nextFx = t + 700; particles.push({k:'emoji', ch: pick(['💸','✨','💵']), x:bx+rand(-30,30), y:by-120, vx:rand(-20,20), vy:rand(20,60), g:30, born:t, life:1800, size:16}); }
+    }
+    if (p.act === 'dance' && t > p.nextFx) { p.nextFx = t + rand(900,1500); particles.push({k:'emoji', ch: pick(['🎵','🎶','✨']), x:p.x+rand(-12,12), y:p.y-100, vx:rand(-10,10), vy:-40, born:t, life:1400, size:14}); }
+    if (p.act === 'fight' && t > p.nextFx) {
+      const q = people.get(p.partner); p.nextFx = t + 550;
+      if (q) particles.push({k:'emoji', ch: pick(['💥','⭐','💢']), x:(p.x+q.x)/2+rand(-6,6), y:p.y-60+rand(-10,10), vx:0, vy:-15, born:t, life:500, size:rand(18,26)});
+    }
+    if (p.act === 'cake' && t > p.nextThrow) {
+      p.nextThrow = t + 3500;
+      const vs = [...people.values()].filter(q => q !== p && !q.leaving);
+      if (vs.length) { const v = pick(vs); particles.push({k:'cake', x0:p.x+10, y0:p.y-60, vid:v.id, born:t, life:800}); p.face = v.x >= p.x ? 1 : -1; }
+    }
+    if (p.act === 'toast' && t > p.nextFx) {
+      p.nextFx = t + 6500;
+      p.bubble = {text: pick(TOASTS), until: t + 6000, kind:'toast'};
+      confetti(p.x, p.y-110, 18);
+    }
+    if (p.role === 'bride' && wedding && Math.random() < dt*3) particles.push({k:'emoji', ch: pick(['❤️','💕','💖']), x:FLOOR.cx+rand(-40,40), y:FLOOR.cy-110, vx:rand(-15,15), vy:rand(-50,-25), born:t, life:2000, size:rand(14,20)});
+
+    // movement
+    const dx = p.tx - p.x, dy = p.ty - p.y, d = Math.hypot(dx, dy);
+    const sp = p.act === 'waltz' || p.role ? 220 : (p.act === 'partner' && people.get(p.leader)?.act === 'waltz' ? 220 : 110);
+    p.moving = d > 3;
+    if (d > 0.5) { const m = Math.min(d, sp*dt); p.x += dx/d*m; p.y += dy/d*m; if (Math.abs(dx) > 2 && p.act!=='fight' && p.act!=='partner') p.face = dx > 0 ? 1 : -1; }
+    if (p.act === 'fight') { const q = people.get(p.partner); if (q) { p.face = q.x >= p.x ? 1 : -1; q.face = -p.face; } }
+    if (p.leaving && p.y > 975) { people.delete(p.id); }
+  }
+  // particles
+  particles = particles.filter(q => {
+    const age = t - q.born; if (age > q.life) {
+      if (q.k === 'cake') { const v = people.get(q.vid); if (v) { v.cream = t + 7000; burst(v.x, v.y-75, '🍰', 3); } }
+      return false;
+    }
+    if (q.k !== 'cake') { q.vy += (q.g||0)*dt; q.x += q.vx*dt; q.y += q.vy*dt; if (q.k==='conf') q.r += q.vr*dt; }
+    return true;
+  });
+}
+
+/* ---------------- drawing a person ---------------- */
+function personScale(y){ return Math.max(0.78, Math.min(1.18, 0.82 + (y - 590) / 230 * 0.32)); }
+function getPose(p, t){
+  const T = t/1000 + p.seed;
+  const o = {bob:0, aL:0.25, aR:0.25, leg:0, prop:null};
+  const leader = p.leader ? people.get(p.leader) : null;
+  const act = p.act === 'partner' && leader ? (leader.act === 'wedding' ? 'wed' : leader.act) : (p.act === 'wedding' ? 'wed' : p.act);
+  if (p.moving && !['waltz','fight'].includes(act)) { o.leg = Math.sin(T*11)*0.45; o.bob = Math.abs(Math.sin(T*11))*2; }
+  if (act === 'dance') { o.bob = Math.abs(Math.sin(T*6))*9; o.aL = 2.5 + Math.sin(T*6)*0.5; o.aR = 2.5 - Math.sin(T*6)*0.5; o.leg = Math.sin(T*6)*0.35;
+    if (!p.moving) p.face = Math.sin(T*1.6) > 0 ? 1 : -1; }
+  else if (act === 'toast') { o.aR = 2.7 + Math.sin(T*2)*0.15; o.aL = 0.5; o.prop = 'glass'; o.bob = Math.abs(Math.sin(T*2))*1.5; }
+  else if (act === 'fight') { const ph = Math.sin(T*14); const fr = p.face;
+    const punch = 1.55, rest = 0.9;
+    if (fr > 0) { o.aR = ph > 0 ? punch : rest; o.aL = ph > 0 ? -0.6 : -1.3; } else { o.aL = ph > 0 ? punch : rest; o.aR = ph > 0 ? -0.6 : -1.3; }
+    o.bob = Math.abs(ph)*3; o.leg = ph*0.25; o.shake = Math.sin(T*40)*1.5; }
+  else if (act === 'waltz') { o.aL = 1.6; o.aR = 1.3; o.bob = Math.abs(Math.sin(T*3.2))*3; o.leg = Math.sin(T*6)*0.3; }
+  else if (act === 'cake') { const ph = ((t - p.started) % 3500) / 3500;
+    if (ph > 0.75) { o.aR = 2.9; o.prop = 'cake'; } else if (ph < 0.08) { o.aR = 1.6; } else { o.aR = 0.5; o.prop = ph > 0.3 ? 'cake' : null; } }
+  else if (act === 'wed') { o.aL = p.role === 'groom' ? 0.25 : 0.9; o.aR = p.role === 'groom' ? 0.9 : 0.25; o.bob = Math.abs(Math.sin(T*2))*1.5; }
+  else if (act === 'idle' && wedding && !p.leaving) { const c = Math.sin(T*9); o.aL = 1.2 + c*0.25; o.aR = 1.2 + c*0.25; o.bob = Math.abs(Math.sin(T*4.5))*2.5; }
+  return o;
+}
+function arm(c, sx, sy, a, side, color, skin, len){
+  const ex = sx + Math.sin(a)*len*side, ey = sy + Math.cos(a)*len;
+  c.strokeStyle = color; c.lineWidth = 6.5; c.lineCap = 'round';
+  c.beginPath(); c.moveTo(sx, sy); c.lineTo(ex, ey); c.stroke();
+  c.fillStyle = skin; c.beginPath(); c.arc(ex, ey, 3.6, 0, 7); c.fill();
+  return [ex, ey];
+}
+function drawPerson(c, p, t){
+  const s = personScale(p.y), po = getPose(p, t);
+  const bride = p.role === 'bride', groom = p.role === 'groom', f = p.gender === 'f';
+  // shadow
+  c.fillStyle = 'rgba(0,0,0,.35)'; c.beginPath(); c.ellipse(p.x, p.y, 17*s, 5*s, 0, 0, 7); c.fill();
+  c.save(); c.translate(p.x + (po.shake||0), p.y - po.bob*s); c.scale(s, s);
+  if (bride) { // желек (veil) behind
+    c.fillStyle = 'rgba(255,255,255,.85)';
+    c.beginPath(); c.moveTo(0,-112); c.quadraticCurveTo(-30,-60,-24,-2); c.lineTo(24,-2); c.quadraticCurveTo(30,-60,0,-112); c.fill();
+  }
+  // legs
+  c.fillStyle = '#1c1c22';
+  for (const sd of [-1,1]) { c.save(); c.translate(sd*6, -16); c.rotate(po.leg*sd); c.fillRect(-3,0,6,16); c.fillStyle='#3a2416'; c.fillRect(-4,13,9,4); c.restore(); c.fillStyle='#1c1c22'; }
+  // robe / dress
+  const robe = bride ? '#ffffff' : (groom ? '#1b2a6b' : p.robe);
+  c.fillStyle = robe;
+  c.beginPath();
+  if (f || bride) { c.moveTo(-11,-62); c.lineTo(11,-62); c.lineTo(21,-5); c.quadraticCurveTo(0,0,-21,-5); }
+  else { c.moveTo(-13,-62); c.lineTo(13,-62); c.lineTo(17,-14); c.lineTo(-17,-14); }
+  c.closePath(); c.fill();
+  c.strokeStyle = '#e9c24d'; c.lineWidth = 1.8;
+  if (f || bride) { // kamzol vest + hem ornament
+    c.fillStyle = bride ? '#c8102e' : p.vest; c.fillRect(-10,-62,20,22);
+    c.strokeRect(-10,-62,20,22);
+    c.beginPath(); c.moveTo(-19,-9); c.quadraticCurveTo(0,-4,19,-9); c.stroke();
+    for (let i=-2;i<=2;i++){ c.fillStyle='#e9c24d'; c.beginPath(); c.arc(i*7,-7.5+Math.abs(i)*-0.6,1.4,0,7); c.fill(); }
+  } else { // shirt + chapan trim + belt
+    c.fillStyle = '#f4efe4'; c.beginPath(); c.moveTo(-4,-62); c.lineTo(4,-62); c.lineTo(0,-44); c.fill();
+    c.beginPath(); c.moveTo(-4,-62); c.lineTo(-1,-14); c.moveTo(4,-62); c.lineTo(1,-14); c.stroke();
+    c.beginPath(); c.moveTo(-17,-15); c.lineTo(17,-15); c.stroke();
+    c.fillStyle = '#6b4310'; c.fillRect(-14,-40,28,4); c.fillStyle='#e9c24d'; c.fillRect(-2.5,-40.5,5,5);
+  }
+  // arms
+  const sleeve = bride ? '#ffffff' : robe;
+  const L = arm(c, -11, -58, po.aL, -1, sleeve, p.skin, 23);
+  const R = arm(c, 11, -58, po.aR, 1, sleeve, p.skin, 23);
+  const hand = p.face > 0 ? R : (po.prop ? R : L);
+  // neck + head
+  c.fillStyle = p.skin; c.fillRect(-3,-66,6,6);
+  c.beginPath(); c.arc(0,-74,10,0,7); c.fill();
+  if (f || bride) { c.strokeStyle = '#2a1a12'; c.lineWidth = 3; c.beginPath(); c.moveTo(-9,-74); c.quadraticCurveTo(-12,-55,-9,-44); c.moveTo(9,-74); c.quadraticCurveTo(12,-55,9,-44); c.stroke(); }
+  else { c.fillStyle = '#2a1a12'; c.beginPath(); c.arc(0,-76,10,Math.PI*1.05,Math.PI*1.95); c.fill(); }
+  // face
+  const fx = p.face * 1.5;
+  c.fillStyle = '#1a1a1a'; c.beginPath(); c.arc(-3.5+fx,-74,1.3,0,7); c.arc(3.5+fx,-74,1.3,0,7); c.fill();
+  c.strokeStyle = '#8a3b2b'; c.lineWidth = 1.2; c.beginPath(); c.arc(fx,-71,2.6,0.2,Math.PI-0.2); c.stroke();
+  c.fillStyle = 'rgba(255,110,110,.35)'; c.beginPath(); c.arc(-6+fx,-71,2,0,7); c.arc(6+fx,-71,2,0,7); c.fill();
+  if (!f && !bride && (hash(p.id)>>9)%3===0) { c.strokeStyle='#2a1a12'; c.lineWidth=1.6; c.beginPath(); c.moveTo(-4+fx,-69.5); c.quadraticCurveTo(fx,-71.5,4+fx,-69.5); c.stroke(); }
+  if (p.cream > t) { c.fillStyle = '#fff8ee'; for (const [x,y,r] of [[-4,-75,5],[4,-73,5.5],[0,-70,4.5],[-6,-69,3]]) { c.beginPath(); c.arc(x,y,r,0,7); c.fill(); }
+    c.fillStyle='#ff5a7a'; c.beginPath(); c.arc(2,-78,2,0,7); c.fill(); }
+  // hats
+  if (bride) { // saukele
+    c.fillStyle = '#c8102e'; c.beginPath(); c.moveTo(-8,-81); c.lineTo(0,-116); c.lineTo(8,-81); c.closePath(); c.fill();
+    c.fillStyle = '#e9c24d'; for (let i=0;i<6;i++){ c.beginPath(); c.arc(0,-86-i*5,1.4,0,7); c.fill(); }
+    c.fillRect(-9,-83,18,3); c.fillStyle='#fff'; c.beginPath(); c.arc(0,-117,2.5,0,7); c.fill();
+  } else if (f) { // takiya with owl feather
+    c.fillStyle = '#b3202a'; c.beginPath(); c.ellipse(0,-82,9.5,6,0,Math.PI,0); c.fill();
+    c.fillStyle = '#e9c24d'; c.fillRect(-9.5,-83,19,2.5);
+    c.strokeStyle = '#ffffff'; c.lineWidth = 2.2; c.beginPath(); c.moveTo(2,-87); c.quadraticCurveTo(6,-98,1,-104); c.stroke();
+  } else { // kalpak
+    c.fillStyle = '#f7f3ea'; c.beginPath(); c.moveTo(-12,-80); c.quadraticCurveTo(-6,-104,0,-106); c.quadraticCurveTo(6,-104,12,-80); c.closePath(); c.fill();
+    c.fillStyle = '#151515'; c.beginPath(); c.moveTo(-13,-79); c.lineTo(-1,-79); c.lineTo(-2,-86); c.lineTo(-12,-84); c.closePath(); c.fill();
+    c.beginPath(); c.moveTo(13,-79); c.lineTo(1,-79); c.lineTo(2,-86); c.lineTo(12,-84); c.closePath(); c.fill();
+    if (groom) { c.fillStyle='#e9c24d'; c.beginPath(); c.arc(0,-104,2.5,0,7); c.fill(); c.strokeStyle='#fff'; c.lineWidth=2; c.beginPath(); c.moveTo(0,-105); c.quadraticCurveTo(5,-116,0,-122); c.stroke(); }
+  }
+  // props
+  if (po.prop === 'glass') { const [x,y] = R; c.fillStyle='rgba(220,240,255,.8)'; c.beginPath(); c.moveTo(x-4,y-12); c.lineTo(x+4,y-12); c.lineTo(x+2.5,y-1); c.lineTo(x-2.5,y-1); c.fill();
+    c.fillStyle='#d4a017'; c.fillRect(x-3.4,y-9,6.8,6); }
+  if (po.prop === 'cake') { const [x,y] = R; drawCake(c, x, y-8, 1); }
+  c.restore();
+  // name tag
+  const nm = short(p.nick, 13);
+  c.font = `800 ${Math.round(11*s)}px system-ui,sans-serif`; c.textAlign='center'; c.textBaseline='middle';
+  const w = c.measureText(nm).width + 10*s, ty = p.y + 10*s;
+  c.fillStyle = scores.has(p.id) ? 'rgba(27,42,107,.9)' : 'rgba(0,0,0,.55)'; rr(c, p.x-w/2, ty-7*s, w, 14*s, 7*s); c.fill();
+  if (scores.has(p.id)) { c.strokeStyle = '#e9c24d'; c.lineWidth = 1.2; c.stroke(); }
+  c.fillStyle = scores.has(p.id) ? '#ffd75e' : '#fff'; c.fillText(nm, p.x, ty+0.5);
+  // timer above head for active actions
+  const end = isCenter(p) && center ? center.end : p.end;
+  if (['dance','toast','fight','cake','waltz','wedding'].includes(p.act) && end > t) {
+    const sec = Math.ceil((end - t)/1000); const lbl = sec >= 60 ? `${Math.floor(sec/60)}:${String(sec%60).padStart(2,'0')}` : sec+'с';
+    c.font = `800 ${Math.round(10*s)}px system-ui,sans-serif`;
+    const ww = c.measureText(lbl).width + 8; const yy = p.y - (p.role==='bride'?128:112)*s - po.bob*s;
+    c.fillStyle = 'rgba(233,194,77,.95)'; rr(c, p.x-ww/2, yy-6, ww, 12, 6); c.fill();
+    c.fillStyle = '#1b2a6b'; c.fillText(lbl, p.x, yy+0.5);
+  }
+}
+function drawCake(c, x, y, k){
+  c.save(); c.translate(x,y); c.scale(k,k);
+  c.fillStyle='#f3a6c0'; c.fillRect(-7,-4,14,8); c.fillStyle='#fff8ee'; c.fillRect(-7.5,-6,15,3.5);
+  c.fillStyle='#d0103a'; c.beginPath(); c.arc(0,-7.5,2,0,7); c.fill(); c.restore();
+}
+function wrapText(c, text, maxW){
+  const words = text.split(/\s+/), lines = []; let line = '';
+  for (const w of words) { const tst = line ? line+' '+w : w; if (c.measureText(tst).width > maxW && line) { lines.push(line); line = w; } else line = tst; }
+  if (line) lines.push(line); return lines.slice(0,3);
+}
+function drawBubble(c, p, t){
+  if (!p.bubble || p.bubble.until < t) return;
+  const s = personScale(p.y), toast = p.bubble.kind === 'toast';
+  c.font = `800 ${toast?13:12}px system-ui,sans-serif`;
+  const lines = wrapText(c, p.bubble.text, toast ? 150 : 130);
+  const lh = toast ? 16 : 15, bw = Math.max(...lines.map(l=>c.measureText(l).width)) + 18, bh = lines.length*lh + 10;
+  let bx = p.x - bw/2, by = p.y - 125*s - bh - (p.role==='bride'?16:0);
+  bx = Math.max(6, Math.min(W - bw - 6, bx));
+  const a = Math.min(1, (p.bubble.until - t)/300);
+  c.globalAlpha = a;
+  c.fillStyle = '#ffffff'; rr(c, bx, by, bw, bh, 10); c.fill();
+  if (toast) { c.strokeStyle = '#e9c24d'; c.lineWidth = 3; c.stroke(); }
+  c.beginPath(); c.moveTo(p.x-6, by+bh-1); c.lineTo(p.x, by+bh+9); c.lineTo(p.x+6, by+bh-1); c.fill();
+  c.fillStyle = toast ? '#9b1b3f' : '#1a1a1a'; c.textAlign='left'; c.textBaseline='top';
+  lines.forEach((l,i) => c.fillText(l, bx+9, by+6+i*lh));
+  c.globalAlpha = 1;
+}
+
+/* ---------------- render ---------------- */
+function render(t){
+  ctx.setTransform(1,0,0,1,0,0);
+  if (bg) ctx.drawImage(bg, 0, 0);
+  ctx.setTransform(scale,0,0,scale,0,0);
+  // wedding spotlight
+  if (wedding) { const gl = ctx.createRadialGradient(FLOOR.cx, FLOOR.cy-30, 10, FLOOR.cx, FLOOR.cy-30, 140);
+    gl.addColorStop(0,'rgba(255,240,200,.35)'); gl.addColorStop(1,'rgba(255,240,200,0)'); ctx.fillStyle = gl; ctx.fillRect(FLOOR.cx-150, FLOOR.cy-180, 300, 300); }
+  const list = [...people.values()].sort((a,b) => a.y - b.y);
+  for (const p of list) drawPerson(ctx, p, t);
+  for (const q of particles) {
+    const age = (t - q.born)/q.life;
+    if (q.k === 'emoji') { ctx.globalAlpha = Math.max(0, 1 - Math.max(0, age-0.6)/0.4); ctx.font = `${q.size}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(q.ch, q.x, q.y); }
+    else if (q.k === 'conf') { ctx.globalAlpha = Math.max(0, 1 - age); ctx.save(); ctx.translate(q.x, q.y); ctx.rotate(q.r); ctx.fillStyle = q.c; ctx.fillRect(-3,-1.5,6,3); ctx.restore(); }
+    else if (q.k === 'cake') { const v = people.get(q.vid); if (!v) continue;
+      const x1 = v.x, y1 = v.y - 75*personScale(v.y); const x = q.x0 + (x1-q.x0)*age, y = q.y0 + (y1-q.y0)*age - Math.sin(age*Math.PI)*70;
+      ctx.globalAlpha = 1; drawCake(ctx, x, y, 1.3); }
+  }
+  ctx.globalAlpha = 1;
+  for (const p of list) drawBubble(ctx, p, t);
+}
+
+let lastT = now();
+function loop(){
+  const t = now(); const dt = Math.min(0.05, (t - lastT)/1000); lastT = t;
+  update(dt, t); render(t);
+  requestAnimationFrame(loop);
+}
+
+/* ---------------- live connection ----------------
+   2 режим:
+   1) server — өз server.js (компьютерде / ?server=1)
+   2) euler  — Euler Stream бұлттық WebSocket (серверсіз, iPad үшін)  */
+let ws = null, connected = false, serverStatus = '', retryTimer = null;
+const ONCLAUDE = /claude|anthropic/.test(location.hostname);
+function loadCfg(){
+  let c = {}; try { c = JSON.parse(localStorage.getItem('toi_cfg') || '{}'); } catch {}
+  if (params.get('user')) c.user = params.get('user');
+  if (params.get('key')) c.key = params.get('key');
+  c.user = String(c.user || '').replace(/^@/, '').trim(); c.key = String(c.key || '').trim();
+  return c;
+}
+function saveCfg(){ try { localStorage.setItem('toi_cfg', JSON.stringify(cfg)); } catch {} }
+let cfg = loadCfg();
+function wsUrl(){
+  if (params.get('ws')) return params.get('ws');
+  if (/^https?:$/.test(location.protocol) && (params.has('server') || /^(localhost|127\.0\.0\.1|\[::1\]|192\.168\.|10\.)/.test(location.hostname)))
+    return (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host;
+  return null;
+}
+function mode(){ return wsUrl() ? 'server' : (cfg.user && cfg.key && !ONCLAUDE ? 'euler' : 'none'); }
+function setStatus(t){ serverStatus = t; updateTest(); }
+function retry(sec){ clearTimeout(retryTimer); retryTimer = setTimeout(connectLive, sec*1000); }
+function connectLive(){
+  clearTimeout(retryTimer);
+  if (ws) { try { ws.onclose = null; ws.close(); } catch {} ws = null; }
+  connected = false;
+  const m = mode();
+  if (m === 'server') connectServer(); else if (m === 'euler') connectEuler(); else setStatus('');
+}
+function connectServer(){
+  setStatus('🟡 Серверге қосылуда…');
+  try { ws = new WebSocket(wsUrl()); } catch (e) { retry(3); return; }
+  ws.onopen = () => { connected = true; setStatus('🟢 Серверге қосылды'); };
+  ws.onclose = () => { connected = false; setStatus('🔴 Сервер жоқ, қайта қосылуда…'); retry(3); };
+  ws.onerror = () => {};
+  ws.onmessage = e => { let m; try { m = JSON.parse(e.data); } catch { return; } handle(m); };
+}
+function handle(m){
+  if (m.type === 'gift') giftAction(m.uniqueId, m.nickname, m.giftName, m.diamondCount, m.repeatCount);
+  else if (m.type === 'chat') chatAction(m.uniqueId, m.nickname, m.comment);
+  else if (m.type === 'member') joinAction(m.uniqueId, m.nickname);
+  else if (m.type === 'like') likeAction(m.uniqueId, m.nickname, m.likeCount);
+  else if (m.type === 'status') setStatus('🟢 ' + m.text);
+}
+const CLOSE_WHY = {4404:'Эфир ашық емес — алдымен эфирді аш', 4005:'Эфир аяқталды', 4401:'API кілті қате — ⚙️ Баптаудан тексер',
+  4429:'Тым көп қосылу — 1 минут күт', 4400:'Логин қате болуы мүмкін', 4403:'Рұқсат жоқ (кілтті тексер)'};
+function connectEuler(){
+  setStatus(`🟡 @${cfg.user} эфиріне қосылуда…`);
+  const url = `wss://ws.eulerstream.com?uniqueId=${encodeURIComponent(cfg.user)}&apiKey=${encodeURIComponent(cfg.key)}`;
+  try { ws = new WebSocket(url); } catch (e) { setStatus('🔴 ' + e.message); retry(20); return; }
+  ws.binaryType = 'arraybuffer';
+  ws.onopen = () => { connected = true; setStatus(`🟢 @${cfg.user} эфиріне қосылды`); banner('🟢 <span class="y">Эфирге қосылды!</span>'); };
+  ws.onerror = () => {};
+  ws.onclose = e => {
+    connected = false;
+    setStatus('🔴 ' + (CLOSE_WHY[e.code] || `Байланыс үзілді (${e.code}), қайта қосылуда…`));
+    dbg('close', {code: e.code, reason: e.reason});
+    if (e.code === 4401 || e.code === 4403) return;
+    retry(e.code === 4429 ? 60 : 15);
+  };
+  ws.onmessage = e => {
+    if (typeof e.data !== 'string') { dbg('binary', {bytes: e.data.byteLength}); return; }
+    let d; try { d = JSON.parse(e.data); } catch { dbg('text', {raw: e.data.slice(0,120)}); return; }
+    const list = Array.isArray(d) ? d : (Array.isArray(d.messages) ? d.messages : [d]);
+    for (const m of list) { try { handleEuler(m); } catch (err) { dbg('err', {msg: err.message}); } }
+  };
+}
+const yes = v => v === true || v === 1 || v === '1' || v === 'true';
+function handleEuler(m){
+  const type = String(m.type || m.method || m.event || m.name || '');
+  const p = m.data || m.payload || m.decoded || m;
+  dbg(type, p);
+  const t = type.toLowerCase();
+  const u = p.user || p.sender || p.fromUser || {};
+  const uid = String(u.uniqueId || u.displayId || u.unique_id || u.userId || u.id || p.uniqueId || 'anon');
+  const nick = u.nickname || u.nickName || p.nickname || uid;
+  if (t.includes('gift')) {
+    const gd = p.giftDetails || p.gift || p.extendedGiftInfo || {};
+    const giftType = gd.giftType ?? gd.type ?? p.giftType;
+    if (+giftType === 1 && !yes(p.repeatEnd)) return;      // серия біткенде ғана
+    const name = gd.giftName || gd.name || p.giftName || '';
+    const dia = +(gd.diamondCount ?? gd.diamond_count ?? p.diamondCount ?? 0) || 0;
+    giftAction(uid, nick, name, dia, +(p.repeatCount || p.comboCount || 1) || 1);
+  } else if (t.includes('chat') || t.includes('comment')) chatAction(uid, nick, p.comment || p.content || '');
+  else if (t.includes('member') || t.includes('join')) joinAction(uid, nick);
+  else if (t.includes('like')) likeAction(uid, nick, +(p.likeCount || p.count || 1));
+}
+/* debug panel: ?debug=1 — эфирден келген оқиғаларды экранға шығарады */
+const dbgEl = params.has('debug') ? (() => { const d = document.createElement('div'); d.id = 'dbg'; document.body.appendChild(d); return d; })() : null;
+function dbg(type, p){
+  if (!dbgEl) return;
+  let s = ''; try { s = JSON.stringify(p); } catch {}
+  const line = document.createElement('div'); line.textContent = `[${type}] ${s.slice(0, 260)}`;
+  dbgEl.prepend(line); while (dbgEl.childNodes.length > 25) dbgEl.lastChild.remove();
+}
+
+/* ---------------- setup screen ---------------- */
+const setupEl = document.getElementById('setup');
+function openSetup(){
+  document.getElementById('sUser').value = cfg.user ? '@' + cfg.user : '';
+  document.getElementById('sKey').value = cfg.key || '';
+  document.getElementById('sNote').style.display = ONCLAUDE ? 'block' : 'none';
+  setupEl.style.display = 'flex';
+}
+document.getElementById('sGo').onclick = () => {
+  cfg.user = document.getElementById('sUser').value.replace(/^@/, '').trim();
+  cfg.key = document.getElementById('sKey').value.trim();
+  if (!cfg.user || !cfg.key) { document.getElementById('sErr').textContent = 'Логин мен кілтті жаз'; return; }
+  saveCfg(); setupEl.style.display = 'none';
+  for (const q of [...people.values()]) if (!scores.has(q.id)) leave(q);   // демо қонақтарды шығару
+  connectLive();
+};
+document.getElementById('sTest').onclick = () => { setupEl.style.display = 'none'; };
+let cornerTaps = [];
+document.getElementById('corner').onclick = () => {   // сол жақ жоғарғы бұрышты 3 рет бас → баптау
+  const t = now(); cornerTaps = cornerTaps.filter(x => t - x < 1200); cornerTaps.push(t);
+  if (cornerTaps.length >= 3) { cornerTaps = []; openSetup(); }
+};
+
+/* ---------------- test panel ---------------- */
+const NICKS = ['soveto','Erkebulan','ADILET','aisss','Daniyar','gusi_pusi','ZHANSAYA','Aiym','Syrly_Alem','ulbolsyyn','Askar_01','Madi.kz','Nurik','Dana.k','Bekzat','Tomiris','Alua_07','Sanzhar'];
+const COMMENTS = ['Той құтты болсын!','Мен де биге шыққым келеді','Жарайсыңдар 😂','Қалыңдық кім?','Сәлем бәріне!','Мен бармын ✋','Тост айт!','Бидің королі 👑','Ура билеп жүрмін','Керемет той!','Мені де шақырыңдар','Біздің ауылдан сәлем'];
+let multi = 1, auto = null;
+function rndUser(){ const known = [...people.values()].filter(p=>!p.npc && !p.leaving); if (known.length && Math.random() < .55) { const p = pick(known); return [p.id, p.nick]; } const n = pick(NICKS) + (Math.random()<.3 ? '_'+Math.floor(rand(1,99)) : ''); return [n.toLowerCase(), n]; }
+const tg = document.getElementById('testGifts');
+GIFTS.forEach(g => { const b = document.createElement('button'); b.textContent = g.icon + ' ' + g.label; b.onclick = () => { const [id,n] = rndUser(); giftAction(id, n, g.names[0], g.coins, multi); }; tg.appendChild(b); });
+document.getElementById('tChat').onclick = () => { const [id,n] = rndUser(); chatAction(id, n, pick(COMMENTS)); };
+document.getElementById('tJoin').onclick = () => { const n = pick(NICKS)+'_'+Math.floor(rand(1,999)); joinAction(n.toLowerCase(), n); };
+document.getElementById('tLike').onclick = () => { const [id,n] = rndUser(); likeAction(id, n, 3); };
+document.getElementById('tMulti').onclick = e => { multi = multi === 1 ? 5 : 1; e.target.textContent = '×' + multi; e.target.classList.toggle('on', multi > 1); };
+document.getElementById('tAuto').onclick = e => {
+  if (auto) { clearInterval(auto); auto = null; e.target.textContent = '▶ Авто-демо'; e.target.classList.remove('on'); return; }
+  e.target.textContent = '⏸ Тоқтату'; e.target.classList.add('on');
+  const step = () => { const r = Math.random(); const [id,n] = rndUser();
+    if (r < .35) joinAction(...rndUser());
+    else if (r < .6) chatAction(id, n, pick(COMMENTS));
+    else if (r < .7) likeAction(id, n, 3);
+    else { const g = Math.random() < .5 ? GIFTS[0] : pick(GIFTS); giftAction(id, n, g.names[0], g.coins, 1); } };
+  step(); auto = setInterval(step, 1300);
+};
+let testHidden = false;
+document.getElementById('tSetup').onclick = () => openSetup();
+document.getElementById('hideTest').onclick = () => { testHidden = true; updateTest(); };
+addEventListener('keydown', e => { if (e.key === 't' || e.key === 'T' || e.key === 'е') { testHidden = !testHidden; updateTest(); } });
+function updateTest(){
+  const show = !params.has('clean') && !testHidden && (!connected || params.has('test'));
+  document.getElementById('test').style.display = show ? 'block' : 'none';
+  document.getElementById('status').textContent = serverStatus ||
+    (ONCLAUDE ? '🧪 Тест режимі — батырмаларды бас' : '🧪 Тест режимі — эфирге қосылу үшін ⚙️ Баптау');
+}
+
+/* ---------------- start ---------------- */
+resize();
+updateTest();
+if (mode() === 'none' && !ONCLAUDE && !params.has('test') && !params.has('clean')) openSetup();
+connectLive();
+// a few starting guests so the stage is not empty
+if (mode() === 'none') ['Daniyar','aisss','Erkebulan','ulbolsyyn','gusi_pusi','ADILET'].forEach((n,i) => setTimeout(() => { if (mode() === 'none') joinAction(n.toLowerCase(), n); }, 300 + i*350));
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

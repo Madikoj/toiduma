@@ -1,0 +1,13 @@
+{
+  "name": "qazaq-toi",
+  "version": "1.0.0",
+  "description": "Қазақ тойы — TikTok Live интерактивті ойыны",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "tiktok-live-connector": "latest",
+    "ws": "^8.18.0"
+  }
+}
