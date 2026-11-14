@@ -36,6 +36,7 @@
     border:.25em solid #ffd75e;border-radius:2em;color:#fff;font-weight:900;font-size:1.7em;
     padding:.25em 1em;white-space:nowrap;max-width:46em;overflow:hidden;text-overflow:ellipsis;
     box-shadow:0 .3em 1em rgba(0,0,0,.5)}
+  #banner{z-index:7}
   #banner.on{opacity:1;transform:translateX(-50%) scale(1)}
   #banner .y{color:#ffd75e}
   #queue{position:absolute;right:1.6em;top:30.8em;color:#fff;font-size:1.25em;font-weight:800;
@@ -83,6 +84,13 @@
   #setup .vol input{flex:1}
   #setup .chk{font-weight:600;font-size:14px;display:flex;align-items:center;gap:8px;margin:0}
   #setup .chk input{width:auto;margin:0}
+  #ytWrap{position:absolute;left:50%;top:33.5em;transform:translateX(-50%);width:max(200px,24em);z-index:4;display:none;
+    background:#111;border:.35em solid #e9c24d;border-radius:.8em;box-shadow:0 .4em 1.2em rgba(0,0,0,.6);overflow:hidden}
+  #ytWrap.left{left:.6em;top:auto;bottom:.6em;transform:none}
+  #ytWrap.right{left:auto;right:.6em;top:auto;bottom:.6em;transform:none}
+  #ytWrap .tvLabel{cursor:pointer;pointer-events:auto;background:#1b2a6b;color:#ffd75e;font-weight:800;font-size:max(11px,1.2em);text-align:center;padding:.15em 0}
+  #ytBox{width:100%;aspect-ratio:1/1;min-height:200px;display:block}
+  #setup textarea{width:100%;box-sizing:border-box;font-size:15px;padding:9px;border-radius:8px;border:0;margin:4px 0;font-family:inherit}
   #conn{position:absolute;left:50%;bottom:1.2em;transform:translateX(-50%);background:rgba(0,0,0,.72);color:#fff;font-weight:800;
     font-size:1.35em;padding:.35em .9em;border-radius:2em;white-space:nowrap;z-index:6;pointer-events:none;transition:opacity .5s;opacity:0}
   #tapSound{position:absolute;left:50%;bottom:24%;transform:translateX(-50%);background:rgba(0,0,0,.7);color:#fff;
@@ -93,6 +101,7 @@
 <div id="wrap">
   <canvas id="cv"></canvas>
   <div id="corner"></div>
+  <div id="ytWrap"><div class="tvLabel" id="tvLabel" title="Басып орнын ауыстыр">📺 Той теледидары ⇄</div><div id="ytBox"></div></div>
   <div id="conn"></div>
   <div id="tapSound">🔇 Дыбысты қосу үшін экранды бас</div>
   <div id="hud">
@@ -129,7 +138,14 @@
   <p class="hint" id="sNote" style="display:none">⚠️ Бұл алдын ала көру беті эфирге қосыла алмайды — GitHub Pages сілтемесін аш.</p>
   <div class="mus">
     <b>🎵 Музыка</b>
-    <select id="mSrc"><option value="gen">Домбыра әуені (автоматты)</option><option value="file">Өз әндерім (плейлист)</option><option value="off">Өшірулі</option></select>
+    <select id="mSrc"><option value="gen">Домбыра әуені (автоматты)</option><option value="yt">YouTube сілтемелері</option><option value="file">Өз әндерім (плейлист)</option><option value="off">Өшірулі</option></select>
+    <div id="mYtRow">
+      <div class="hint">Әр жолға бір YouTube сілтемесі (бейне не плейлист):</div>
+      <textarea id="ytList" rows="4" placeholder="https://youtu.be/...&#10;https://www.youtube.com/playlist?list=..."></textarea>
+      <div class="special">💍 Той кезінде:</div><input id="ytWed" placeholder="YouTube сілтемесі (міндетті емес)">
+      <div class="special">💃 Вальс кезінде:</div><input id="ytWal" placeholder="YouTube сілтемесі (міндетті емес)">
+      <div class="row2" style="margin-top:8px"><button type="button" class="sm" id="ytSave">💾 Сақтау</button><button type="button" class="sm" id="ytNextB">⏭ Келесі</button><span id="ytNow" style="font-size:13px;color:#ffd75e"></span></div>
+    </div>
     <div id="mFileRow">
       <div id="songList"></div>
       <div class="row2"><label class="fbtn">➕ Ән қосу<input type="file" id="mAdd" accept="audio/*" multiple></label>
@@ -744,11 +760,14 @@ function ensureAudio(){
   AC.onstatechange = updateTapPill;
   return AC;
 }
-function applyVolume(){ if (!musicBus) return; const a = audioCfg(); musicBus.gain.value = a.src === 'off' ? 0 : Math.pow(a.vol/100, 1.6) * 0.9; sfxBus.gain.value = a.sfx ? Math.max(0.25, a.vol/100) * 0.7 : 0; }
+function applyVolume(){ try { if (ytReady) yt.setVolume(audioCfg().src === 'off' ? 0 : audioCfg().vol); } catch {} if (!musicBus) return; const a = audioCfg(); musicBus.gain.value = a.src === 'off' ? 0 : Math.pow(a.vol/100, 1.6) * 0.9; sfxBus.gain.value = a.sfx ? Math.max(0.25, a.vol/100) * 0.7 : 0; }
 function updateTapPill(){
   const need = audioCfg().src !== 'off' || audioCfg().sfx;
-  document.getElementById('tapSound').style.display = need && (!AC || AC.state !== 'running') && !ONCLAUDE_PREVIEW_SILENT() ? 'block' : 'none';
+  let show = need && (!AC || AC.state !== 'running');
+  if (audioCfg().src === 'yt' && typeof ytReady !== 'undefined' && ytReady && ytKey) { const st = yt.getPlayerState && yt.getPlayerState(); if (st !== 1 && st !== 3) show = true; }
+  document.getElementById('tapSound').style.display = show ? 'block' : 'none';
 }
+setInterval(() => { try { updateTapPill(); } catch {} }, 1500);
 function ONCLAUDE_PREVIEW_SILENT(){ return false; }
 // any tap unlocks audio (iOS/Safari requirement)
 ['pointerdown','touchend','keydown'].forEach(ev => addEventListener(ev, () => { ensureAudio(); startMusic(); setTimeout(updateTapPill, 100); }, {passive:true}));
@@ -852,16 +871,77 @@ function playFiles(){
   }
   if (fileEl.paused) fileEl.play().catch(()=>{});
 }
-function nextSong(){ if (!lib.playlist.length) return; plIdx++; resumeT = 0; playingKey = ''; if (audioCfg().src === 'file') playFiles(); }
+function nextSong(){ if (audioCfg().src === 'yt') { ytNext(); return; } if (!lib.playlist.length) return; plIdx++; resumeT = 0; playingKey = ''; if (audioCfg().src === 'file') playFiles(); }
 function startMusic(){
-  if (!AC || AC.state !== 'running') return;
   const a = audioCfg();
+  if (a.src === 'yt') { musicOn = false; if (fileEl && !fileEl.paused) fileEl.pause(); playYT(); return; }
+  ytStop();
+  if (!AC) return;
   if (a.src === 'file' && hasSongs()) { musicOn = false; playFiles(); return; }
   if (fileEl && !fileEl.paused) fileEl.pause();
+  if (AC.state !== 'running') return;
   if ((a.src === 'gen' || a.src === 'file') && !musicOn) { musicOn = true; nextStepT = AC.currentTime + 0.1; stepIdx = 0; barIdx = 0; newPhrase(); }
   if (a.src === 'off') musicOn = false;
 }
-setInterval(() => { if (AC && AC.state === 'running' && audioCfg().src === 'file' && hasSongs()) playFiles(); }, 700);
+setInterval(() => { if (AC && AC.state === 'running' && audioCfg().src === 'file' && hasSongs()) playFiles(); if (audioCfg().src === 'yt') playYT(true); }, 700);
+
+/* ---- YouTube (ресми YouTube ойнатқышы арқылы, сахнадағы «теледидарда») ---- */
+let yt = null, ytReady = false, ytKey = '', ytIdx = 0, ytLoading = false, ytPlayingSince = 0;
+function ytParse(u){
+  u = String(u || '').trim(); if (!u) return null;
+  const list = (u.match(/[?&]list=([\w-]+)/) || [])[1];
+  const vid = (u.match(/(?:youtu\.be\/|[?&]v=|\/shorts\/|\/embed\/|\/live\/)([\w-]{11})/) || [])[1] || (/^[\w-]{11}$/.test(u) ? u : null);
+  if (!list && !vid) return null;
+  return {list, vid, raw: u};
+}
+function ytCfg(){ return cfg.yt || (cfg.yt = {list: [], wedding: '', waltz: ''}); }
+function ytWant(){
+  const c = ytCfg(), m = currentMood();
+  if (m === 'wedding' && ytParse(c.wedding)) return {key: 'w:' + c.wedding, t: ytParse(c.wedding), loop: true};
+  if (m === 'waltz' && ytParse(c.waltz)) return {key: 'v:' + c.waltz, t: ytParse(c.waltz), loop: true};
+  const items = c.list.map(ytParse).filter(Boolean); if (!items.length) return null;
+  ytIdx = ytIdx % items.length;
+  return {key: 'p' + ytIdx + ':' + items[ytIdx].raw, t: items[ytIdx], loop: items.length === 1};
+}
+function ytLoadApi(){
+  if (window.YT && window.YT.Player) { ytMake(); return; }
+  if (ytLoading) return; ytLoading = true;
+  window.onYouTubeIframeAPIReady = ytMake;
+  const sc = document.createElement('script'); sc.src = 'https://www.youtube.com/iframe_api'; document.head.appendChild(sc);
+}
+function ytMake(){
+  if (yt) return;
+  document.getElementById('ytWrap').style.display = 'block';
+  yt = new YT.Player('ytBox', {width: '100%', height: '100%',
+    playerVars: {playsinline: 1, rel: 0, modestbranding: 1, controls: 1},
+    events: {
+      onReady: () => { ytReady = true; ytKey = ''; playYT(); },
+      onStateChange: e => {
+        if (e.data === 1) ytPlayingSince = now();
+        if (e.data === 0) { const w = ytWant(); if (w && w.loop) { yt.seekTo(0); yt.playVideo(); } else if (w && !w.t.list) { ytIdx++; ytKey = ''; playYT(); } }
+        updateTapPill();
+      },
+      onError: () => { ytIdx++; ytKey = ''; setTimeout(playYT, 800); },
+    }});
+}
+function playYT(fromTimer){
+  document.getElementById('ytWrap').style.display = 'block';
+  if (!ytReady) { ytLoadApi(); return; }
+  const w = ytWant();
+  if (!w) { try { yt.stopVideo(); } catch {} ytKey = ''; updateNowPlaying(); return; }
+  try { yt.setVolume(audioCfg().vol); } catch {}
+  if (w.key !== ytKey) {
+    ytKey = w.key;
+    if (w.t.list) { yt.loadPlaylist({list: w.t.list, listType: 'playlist', index: 0}); setTimeout(() => { try { yt.setLoop(true); yt.setShuffle(false); } catch {} }, 1500); }
+    else yt.loadVideoById(w.t.vid);
+    updateNowPlaying();
+  } else if (!fromTimer) { const st = yt.getPlayerState && yt.getPlayerState(); if (st !== 1 && st !== 3) yt.playVideo(); }
+}
+function tvPos(){ const w = document.getElementById('ytWrap'); w.classList.remove('left','right'); if (cfg.tvPos) w.classList.add(cfg.tvPos); }
+document.getElementById('tvLabel').onclick = () => { cfg.tvPos = {'' : 'left', left: 'right', right: ''}[cfg.tvPos || '']; saveCfg(); tvPos(); };
+function ytStop(){ document.getElementById('ytWrap').style.display = 'none'; if (ytReady) { try { yt.pauseVideo(); } catch {} } ytKey = ''; }
+function ytNext(){ if (ytReady) { const w = ytWant(); if (w && w.t.list) { try { yt.nextVideo(); } catch {} } else { ytIdx++; ytKey = ''; playYT(); } } }
+
 function scheduler(){
   if (!AC || AC.state !== 'running' || !musicOn) return;
   while (nextStepT < AC.currentTime + 0.15) {
@@ -924,6 +1004,7 @@ async function loadLib(){
 }
 function updateNowPlaying(){
   const el = document.getElementById('nowPlaying'); if (!el) return;
+  if (audioCfg().src === 'yt') { const w = ytWant(); el.textContent = w ? '▶ YouTube: ' + (w.key[0] === 'w' ? 'той әні' : w.key[0] === 'v' ? 'вальс әні' : (ytIdx + 1) + '-сілтеме') : ''; document.getElementById('ytNow').textContent = el.textContent; return; }
   const w = wantTrack(); el.textContent = w && audioCfg().src === 'file' ? '▶ ' + w.t.name : '';
 }
 function renderSongs(){
@@ -950,6 +1031,8 @@ function syncMusicUI(){
   document.getElementById('mVol').value = a.vol;
   document.getElementById('mSfx').checked = a.sfx;
   document.getElementById('mFileRow').style.display = a.src === 'file' ? 'block' : 'none';
+  document.getElementById('mYtRow').style.display = a.src === 'yt' ? 'block' : 'none';
+  const c = ytCfg(); document.getElementById('ytList').value = c.list.join('\n'); document.getElementById('ytWed').value = c.wedding; document.getElementById('ytWal').value = c.waltz;
   document.getElementById('tMusic').textContent = a.src === 'off' ? '🔇 Музыка' : '🔊 Музыка';
   updateNowPlaying();
 }
@@ -966,8 +1049,17 @@ for (const k of ['wedding', 'waltz']) {
   document.getElementById(k + 'Del').onclick = () => { if (lib[k]) URL.revokeObjectURL(lib[k].url); lib[k] = null; playingKey = ''; saveLib(); renderSongs(); startMusic(); };
 }
 document.getElementById('mNext').onclick = () => nextSong();
+document.getElementById('ytNextB').onclick = () => nextSong();
+document.getElementById('ytSave').onclick = () => {
+  const c = ytCfg();
+  c.list = document.getElementById('ytList').value.split(/\s+/).filter(u => ytParse(u));
+  c.wedding = ytParse(document.getElementById('ytWed').value) ? document.getElementById('ytWed').value.trim() : '';
+  c.waltz = ytParse(document.getElementById('ytWal').value) ? document.getElementById('ytWal').value.trim() : '';
+  cfg.mSrc = 'yt'; saveCfg(); ytIdx = 0; ytKey = ''; syncMusicUI(); startMusic();
+  document.getElementById('ytNow').textContent = c.list.length ? '✅ ' + c.list.length + ' сілтеме сақталды' : '⚠️ Дұрыс сілтеме жоқ';
+};
 document.getElementById('tNext').onclick = () => nextSong();
-document.getElementById('tMusic').onclick = () => { cfg.mSrc = audioCfg().src === 'off' ? (hasSongs() ? 'file' : 'gen') : 'off'; saveCfg(); syncMusicUI(); applyVolume(); ensureAudio(); startMusic(); };
+document.getElementById('tMusic').onclick = () => { cfg.mSrc = audioCfg().src === 'off' ? (cfg.lastSrc || 'gen') : (cfg.lastSrc = audioCfg().src, 'off'); saveCfg(); syncMusicUI(); applyVolume(); ensureAudio(); startMusic(); };
 
 /* ---------------- live connection ----------------
    2 режим:
@@ -1193,6 +1285,7 @@ function updateTest(){
 resize();
 updateTest();
 syncMusicUI();
+tvPos();
 loadLib();
 try { ensureAudio(); startMusic(); } catch {}
 updateTapPill();
